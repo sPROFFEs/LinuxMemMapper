@@ -20,14 +20,14 @@ Perfect for easly and automated execution.
 git clone https://github.com/sPROFFEs/LinuxMemMapper.git
 ```
 
-2.Navigate to the directory and allow execution:
+2. Navigate to the directory and allow execution:
 
 ```bash
 cd LinuxMemMapper
 chmod +x LLM.sh
 ```
 
-3.Check dependencies: 
+3. Check dependencies: 
 
 Even if you dont need to worry about kernel headers, built-essentials or dbg-images, the scripts needs dwarf2json binary and volatility 2 linux tools.
 
@@ -35,7 +35,7 @@ This are provided here but not maintained so you might need check for updates.
 
 If you do so, make sure to follow the file structure keeps the same as this repository or if you want, modify the script. 
 
-4.Execute 
+4. Execute 
 
 ```bash
 ./LLM.sh
