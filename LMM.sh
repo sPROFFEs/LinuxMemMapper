@@ -79,22 +79,117 @@ install_dependencies() {
             ;;
     esac
 
-    # Instalar dependencias
-    for dep in "${deps[@]}"; do
-        if ! check_dependency "$dep"; then
-            echo "Intentando instalar: $dep"
-            read -p "$dep no está instalado. ¿Desea instalarlo? (s/n): " install
-            if [[ $install == "s" || $install == "S" ]]; then
-                if ! sudo $install_cmd $dep; then
-                    echo "Error al instalar $dep"
-                    exit 1
-                fi
-            else
-                echo "La dependencia $dep es necesaria. Abortando."
-                exit 1
-            fi
+    # Actualizar repositorios y habilitar repositorios de depuración
+    update_debug_repos() {
+        # Detectar la distribución específica
+        if [ -f /etc/os-release ]; then
+            . /etc/os-release
+            DISTRO_ID=$ID
+            DISTRO_VERSION=$VERSION_ID
         fi
-    done
+
+        case $DISTRO_ID in
+            kali)
+                echo "Actualizando repositorios para Kali Linux..."
+                sudo apt update
+                # Habilitar repositorios deb-src si no están habilitados
+                if ! grep -q "^deb-src" /etc/apt/sources.list; then
+                    echo "Habilitando repositorios deb-src..."
+                    sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+                    sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
+                fi
+                # Agregar repositorios debug específicos de Kali
+                if ! grep -q "kali-debug" /etc/apt/sources.list; then
+                    echo "Agregando repositorios debug de Kali..."
+                    echo "deb http://http.kali.org/kali kali-rolling-debug main contrib non-free" | \
+                        sudo tee -a /etc/apt/sources.list.d/kali-debug.list
+                fi
+                sudo apt update
+                ;;
+
+            parrot)
+                echo "Actualizando repositorios para Parrot OS..."
+                sudo apt update
+                # Habilitar repositorios deb-src
+                if ! grep -q "^deb-src" /etc/apt/sources.list; then
+                    echo "Habilitando repositorios deb-src..."
+                    sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+                    sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
+                fi
+                # Agregar repositorios debug específicos de Parrot
+                if ! grep -q "parrot-debug" /etc/apt/sources.list.d/parrot-debug.list 2>/dev/null; then
+                    echo "Agregando repositorios debug de Parrot..."
+                    echo "deb http://deb.parrotsec.org/parrot parrot-debug main contrib non-free" | \
+                        sudo tee /etc/apt/sources.list.d/parrot-debug.list
+                fi
+                sudo apt update
+                ;;
+
+            ubuntu|debian)
+                echo "Actualizando repositorios para ${DISTRO_ID^}..."
+                sudo apt update
+                # Habilitar repositorios deb-src
+                if ! grep -q "^deb-src" /etc/apt/sources.list; then
+                    echo "Habilitando repositorios deb-src..."
+                    sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+                    sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
+                fi
+                # Configurar repositorios dbgsym
+                if [ "$DISTRO_ID" = "ubuntu" ]; then
+                    if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
+                        echo "Instalando llaves para repositorios dbgsym..."
+                        sudo apt install -y ubuntu-dbgsym-keyring
+                    fi
+                    if ! grep -q "ddebs.ubuntu.com" /etc/apt/sources.list.d/ddebs.list 2>/dev/null; then
+                        echo "Configurando repositorio dbgsym de Ubuntu..."
+                        codename=$(lsb_release -c | cut -f2)
+                        echo "deb http://ddebs.ubuntu.com ${codename} main restricted universe multiverse
+    deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multiverse" | \
+                            sudo tee /etc/apt/sources.list.d/ddebs.list
+                    fi
+                elif [ "$DISTRO_ID" = "debian" ]; then
+                    if ! grep -q "debian-debug" /etc/apt/sources.list.d/debian-debug.list 2>/dev/null; then
+                        echo "Configurando repositorio debug de Debian..."
+                        codename=$(lsb_release -c | cut -f2)
+                        echo "deb http://debug.mirrors.debian.org/debian-debug/ ${codename}-debug main" | \
+                            sudo tee /etc/apt/sources.list.d/debian-debug.list
+                    fi
+                fi
+                sudo apt update
+                ;;
+
+            backbox)
+                echo "Actualizando repositorios para BackBox..."
+                sudo apt update
+                # Habilitar repositorios deb-src
+                if ! grep -q "^deb-src" /etc/apt/sources.list; then
+                    echo "Habilitando repositorios deb-src..."
+                    sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+                    sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
+                fi
+                # Agregar repositorios debug específicos de BackBox
+                if ! grep -q "backbox-debug" /etc/apt/sources.list.d/backbox-debug.list 2>/dev/null; then
+                    echo "Agregando repositorios debug de BackBox..."
+                    codename=$(lsb_release -c | cut -f2)
+                    echo "deb http://ppa.launchpad.net/backbox/debug/ubuntu ${codename} main" | \
+                        sudo tee /etc/apt/sources.list.d/backbox-debug.list
+                fi
+                sudo apt update
+                ;;
+
+            *)
+                echo "Distribución no soportada específicamente: $DISTRO_ID"
+                echo "Intentando configuración genérica basada en Debian..."
+                sudo apt update
+                if ! grep -q "^deb-src" /etc/apt/sources.list; then
+                    echo "Habilitando repositorios deb-src..."
+                    sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+                    sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
+                    sudo apt update
+                fi
+                ;;
+        esac
+    }
 }
 
 # Función para seleccionar versión
