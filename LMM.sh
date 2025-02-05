@@ -313,7 +313,7 @@ compile_module() {
 
     # Cambiar al directorio de herramientas y compilar
     cd tools/linux
-    make -C "$kernel_src" CONFIG_DEBUG_INFO=y M="$(pwd)" modules
+    make
     if [ $? -ne 0 ]; then
         echo "Error durante la compilación. Verifique los errores anteriores."
         exit 1
