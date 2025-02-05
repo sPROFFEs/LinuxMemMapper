@@ -132,7 +132,7 @@ compile_module() {
     fi
 
     cd tools/linux
-    make -C "$kernel_src" M="$(pwd)" CONFIG_DEBUG_INFO=y modules
+    make
     if [ $? -ne 0 ]; then
         echo "Error durante la compilación"
         exit 1
