@@ -49,42 +49,45 @@ install_dependencies() {
     local package_manager
     local install_cmd
     local headers_package="linux-headers-${KERNEL_VERSION}"
-    
-    case $OS_FAMILY in
-        *debian*)
+
+    # Usar ID de /etc/os-release para detectar correctamente Ubuntu o Debian
+    . /etc/os-release
+    DISTRO_ID=$ID
+
+    case $DISTRO_ID in
+        debian)
             package_manager="apt"
-            
-            # Si es Ubuntu, usar los repositorios dbgsym para depuración
-            if [ "$DISTRO_ID" = "ubuntu" ]; then
-                # Ubuntu necesita configuraciones especiales para los repositorios de depuración
-                deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}" "make" "gcc" "dwarfdump")
-                install_cmd="sudo apt install -y ${deps[@]}"
-                # Configurar repositorios dbgsym si es Ubuntu
-                if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
-                    echo "Instalando llaves para repositorios dbgsym..."
-                    sudo apt install -y ubuntu-dbgsym-keyring
-                fi
-                if ! grep -q "ddebs.ubuntu.com" /etc/apt/sources.list.d/ddebs.list 2>/dev/null; then
-                    echo "Configurando repositorio dbgsym de Ubuntu..."
-                    codename=$(lsb_release -c | cut -f2)
-                    echo "deb http://ddebs.ubuntu.com ${codename} main restricted universe multiverse
-    deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multiverse" | \
-                        sudo tee /etc/apt/sources.list.d/ddebs.list
-                fi
-            else
-                # Si es Debian, solo configuramos los paquetes de base
-                deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump")
-                install_cmd="sudo apt install -y ${deps[@]}"
+            # Si es Debian, instalar las dependencias estándar
+            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump")
+            install_cmd="sudo apt install -y ${deps[@]}"
+            ;;
+
+        ubuntu)
+            package_manager="apt"
+            # Si es Ubuntu, instalar dependencias y configurar dbgsym
+            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump")
+            install_cmd="sudo apt install -y ${deps[@]}"
+            # Configurar repositorios dbgsym si es Ubuntu
+            if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
+                echo "Instalando llaves para repositorios dbgsym..."
+                sudo apt install -y ubuntu-dbgsym-keyring
+            fi
+            if ! grep -q "ddebs.ubuntu.com" /etc/apt/sources.list.d/ddebs.list 2>/dev/null; then
+                echo "Configurando repositorio dbgsym de Ubuntu..."
+                codename=$(lsb_release -c | cut -f2)
+                echo "deb http://ddebs.ubuntu.com ${codename} main restricted universe multiverse
+deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multiverse" | \
+                    sudo tee /etc/apt/sources.list.d/ddebs.list
             fi
             ;;
 
-        *arch*)
+        arch)
             package_manager="pacman"
             deps=("base-devel" "linux-headers" "dwarfdump")
             install_cmd="sudo pacman -S --noconfirm ${deps[@]}"
             ;;
 
-        *fedora*|*rhel*)
+        fedora|rhel)
             package_manager="dnf"
             deps=("@development-tools" "kernel-devel" "kernel-debug" "dwarfdump")
             install_cmd="sudo dnf install -y ${deps[@]}"
