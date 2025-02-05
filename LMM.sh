@@ -65,7 +65,7 @@ install_dependencies() {
         ubuntu)
             package_manager="apt"
             # Si es Ubuntu, instalar dependencias y configurar dbgsym
-            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump")
+            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}" "gcc" "make" "dwarfdump")
             install_cmd="sudo apt install -y ${deps[@]}"
             # Configurar repositorios dbgsym si es Ubuntu
             if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
