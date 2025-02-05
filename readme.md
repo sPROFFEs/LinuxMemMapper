@@ -1,97 +1,57 @@
 
 # Linux Memory Mapper (LMM)
 
-🔍 A Bash script utility to inspect and dump process memory regions in Linux systems.
+🔍 A Bash script utility to create volatility 2 & 3 memory maps for the executing system.
 
 ![Bash](https://img.shields.io/badge/-Bash-4EAA25?logo=gnu-bash&logoColor=white)
 ![Linux](https://img.shields.io/badge/-Linux-FCC624?logo=linux&logoColor=black)
 
 ## Description
 
-Linux Memory Mapper (LMM) is a powerful diagnostic tool that allows users to:
-- List memory regions of any running process
-- View detailed memory mapping information
-- Dump specific memory regions to binary files
-- Analyze process memory layout with ease
+Linux Memory Mapper (LMM) is an automated tool that provides an easy way to create memory maps for the executing system kernel.
 
-Perfect for reverse engineering, debugging, and low-level system analysis tasks.
+Perfect for easly and automated execution.
 
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/sPROFFEs/LinuxMemMapper.git
-Navigate to the directory:
+```
 
-bash
-Copy
+2.Navigate to the directory and allow execution:
+
+```bash
 cd LinuxMemMapper
-Make the script executable:
+chmod +x LLM.sh
+```
 
-bash
-Copy
-chmod +x LMM.sh
-Usage
-Basic syntax:
+3.Check dependencies: 
 
-bash
-Copy
-./LMM.sh
-Example workflow:
+Even if you dont need to worry about kernel headers, built-essentials or dbg-images, the scripts needs dwarf2json binary and volatility 2 linux tools.
 
-bash
-Copy
-$ ./LMM.sh
-Enter the PID of the target process: 1234
+This are provided here but not maintained so you might need check for updates.
 
-Process Name: example_process
-Memory Regions:
-1. Start: 00400000 End: 00401000 Perm: r-xp | File: /usr/bin/example_process
-2. Start: 00600000 End: 00602000 Perm: rw-p | File: [heap]
-...
+If you do so, make sure to follow the file structure keeps the same as this repository or if you want, modify the script. 
 
-Enter the number of the region to dump (or 'q' to quit): 2
-Enter output filename: heap_dump.bin
-Dumping region 2 to heap_dump.bin...
-32768 bytes dumped successfully!
-Features
-Process memory mapping visualization
 
-Detailed region permissions display (rwxp)
+4. Execute 
 
-File association tracking
-
-Memory region dumping capability
-
-Interactive user interface
-
-Root access management
-
-Error handling for invalid inputs
-
-Requirements
-Linux operating system
-
-Bash shell (v4.4+ recommended)
-
-sudo privileges for memory dumping
-
-coreutils (dd, grep, awk)
+```bash
+./LLM.sh
+```
 
 Notes
 ⚠️ Important Considerations:
 
-Some operations require root privileges
+Operations require root privileges
 
-Memory dumping may affect process stability
+It would generate modifications on the system, do not use on evidence machines. 
 
 Use with caution on production systems
 
-Dumped files may contain sensitive information
-
-Not all memory regions may be dumpable
-
 License
-This project is currently unlicensed. For usage rights, please contact the author.
+This project is currently unlicensed. For usage rights, check oficial Volatility repositories.
 
 Disclaimer: Use this tool responsibly and only on systems you have permission to inspect. The maintainers are not responsible for any misuse or damage caused by this utility.
