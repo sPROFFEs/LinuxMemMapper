@@ -35,15 +35,14 @@ This are provided here but not maintained so you might need check for updates.
 
 If you do so, make sure to follow the file structure keeps the same as this repository or if you want, modify the script. 
 
-
-4. Execute 
+4.Execute 
 
 ```bash
 ./LLM.sh
 ```
 
-Notes
-⚠️ Important Considerations:
+
+# ⚠️ Important Considerations:
 
 Operations require root privileges
 
