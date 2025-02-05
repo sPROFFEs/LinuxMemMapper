@@ -72,7 +72,7 @@ install_dependencies() {
             ;;
         *fedora*|*rhel*)
             package_manager="dnf"
-            deps=("@development-tools" "kernel-devel" "kernel-debug" "dwarfdump")
+            deps=("@development-tools" "kernel-devel" "kernel-debug" "dwarfdump" "kernel-core")
             install_cmd="sudo dnf install -y ${deps[@]}"
             ;;
         *)
@@ -259,27 +259,48 @@ select_version() {
 
 # Función para compilar el módulo
 compile_module() {
-    local kernel_src="/lib/modules/${KERNEL_VERSION}/build"
+    local kernel_src
+    local build_dir="build"
     
+    # Detectar el sistema operativo para ajustar la ruta del kernel
+    case $OS_FAMILY in
+        *debian*)
+            # En sistemas Debian/Ubuntu
+            kernel_src="/lib/modules/${KERNEL_VERSION}/build"
+            ;;
+        *fedora*)
+            # En sistemas fedora Linux
+            kernel_src="/usr/src/kernel/${KERNEL_VERSION}"
+            ;;
+        *)
+            echo "Sistema operativo no soportado para la compilación del módulo"
+            exit 1
+            ;;
+    esac
+
+    # Verificar si el directorio de construcción del kernel existe
     if [ ! -d "$kernel_src" ]; then
         echo "Error: No se encuentra el directorio de construcción del kernel en $kernel_src"
         echo "Asegúrese de que linux-headers-${KERNEL_VERSION} está instalado correctamente"
         exit 1
     fi
 
+    # Verificar si el directorio tools/linux existe
     if [ ! -d "tools/linux" ]; then
         echo "Error: No se encuentra el directorio tools/linux"
         exit 1
     fi
 
+    # Cambiar al directorio de herramientas y compilar
     cd tools/linux
-    make
+    make -C "$kernel_src" CONFIG_DEBUG_INFO=y M="$(pwd)" modules
     if [ $? -ne 0 ]; then
-        echo "Error durante la compilación"
+        echo "Error durante la compilación. Verifique los errores anteriores."
         exit 1
     fi
     cd ../../
 }
+
 
 # Función para localizar el System.map correcto
 find_system_map() {
@@ -326,10 +347,33 @@ prepare_files_vol2() {
     rm module.dwarf
 }
 
-# Función para crear perfil Vol3
+# Función para crear perfil Vol3 dependiendo del sistema operativo
 create_vol3_profile() {
-    local vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
-    local system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+    local vmlinux_path=""
+    local system_map_path=""
+    
+    # Verificar sistema operativo
+    case $OS_FAMILY in
+        *debian*|*ubuntu*)
+            # Para Debian y derivados (como Ubuntu), las rutas son típicamente estas
+            vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            ;;
+        *arch*|*manjaro*)
+            # En Arch y Manjaro, las rutas pueden variar, aunque normalmente siguen un esquema similar
+            vmlinux_path="/usr/lib/modules/${KERNEL_VERSION}/vmlinux-"
+            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            ;;
+        *fedora*|*rhel*)
+            # Fedora, RedHat y derivados pueden tener sus rutas en otro lugar
+            vmlinux_path="/boot/vmlinuz-${KERNEL_VERSION}"
+            system_map_path="/boot/System.map-${KERNEL_VERSION}"
+            ;;
+        *)
+            echo "Sistema operativo no soportado para la creación del perfil Vol3."
+            exit 1
+            ;;
+    esac
     
     # Verificar que existe dwarf2json
     if [ ! -f "./dwarf2json" ]; then
@@ -345,6 +389,7 @@ create_vol3_profile() {
     
     echo "Generando archivos JSON para Volatility 3..."
     
+    # Ejecutar dwarf2json para generar los archivos JSON
     ./dwarf2json linux --elf "$vmlinux_path" > \
         "temp_vol3/linux-image-${KERNEL_VERSION}-dbg_${KERNEL_VERSION}_amd64.json"
     
