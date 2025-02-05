@@ -57,7 +57,7 @@ install_dependencies() {
             # Si es Ubuntu, usar los repositorios dbgsym para depuración
             if [ "$DISTRO_ID" = "ubuntu" ]; then
                 # Ubuntu necesita configuraciones especiales para los repositorios de depuración
-                deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}" "gcc" "make" "dwarfdump")
+                deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}" "make" "gcc" "dwarfdump")
                 install_cmd="sudo apt install -y ${deps[@]}"
                 # Configurar repositorios dbgsym si es Ubuntu
                 if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
@@ -77,6 +77,20 @@ install_dependencies() {
                 install_cmd="sudo apt install -y ${deps[@]}"
             fi
             ;;
+
+        *arch*)
+            package_manager="pacman"
+            deps=("base-devel" "linux-headers" "dwarfdump")
+            install_cmd="sudo pacman -S --noconfirm ${deps[@]}"
+            ;;
+
+        *fedora*|*rhel*)
+            package_manager="dnf"
+            deps=("@development-tools" "kernel-devel" "kernel-debug" "dwarfdump")
+            install_cmd="sudo dnf install -y ${deps[@]}"
+            ;;
+
+        *)
             echo "Sistema operativo no soportado"
             exit 1
             ;;
@@ -90,6 +104,7 @@ install_dependencies() {
         exit 1
     fi
 }
+
 
 
 
