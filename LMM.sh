@@ -50,45 +50,47 @@ install_dependencies() {
     local install_cmd
     local headers_package="linux-headers-${KERNEL_VERSION}"
     
-    # Establecer las dependencias según el sistema operativo
     case $OS_FAMILY in
         *debian*)
             package_manager="apt"
-            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump")
-            # Asegurarse de que los repositorios deb-src estén habilitados
-            echo "Actualizando repositorios de APT..."
-            sudo apt update
-            if ! grep -q "^deb-src" /etc/apt/sources.list; then
-                echo "Habilitando repositorios deb-src..."
-                sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
-                sudo apt update
+            
+            # Si es Ubuntu, usar los repositorios dbgsym para depuración
+            if [ "$DISTRO_ID" = "ubuntu" ]; then
+                # Ubuntu necesita configuraciones especiales para los repositorios de depuración
+                deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}" "gcc" "make" "dwarfdump")
+                install_cmd="sudo apt install -y ${deps[@]}"
+                # Configurar repositorios dbgsym si es Ubuntu
+                if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
+                    echo "Instalando llaves para repositorios dbgsym..."
+                    sudo apt install -y ubuntu-dbgsym-keyring
+                fi
+                if ! grep -q "ddebs.ubuntu.com" /etc/apt/sources.list.d/ddebs.list 2>/dev/null; then
+                    echo "Configurando repositorio dbgsym de Ubuntu..."
+                    codename=$(lsb_release -c | cut -f2)
+                    echo "deb http://ddebs.ubuntu.com ${codename} main restricted universe multiverse
+    deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multiverse" | \
+                        sudo tee /etc/apt/sources.list.d/ddebs.list
+                fi
+            else
+                # Si es Debian, solo configuramos los paquetes de base
+                deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump")
+                install_cmd="sudo apt install -y ${deps[@]}"
             fi
-            install_cmd="sudo apt install -y ${deps[@]}"
             ;;
-        *arch*)
-            package_manager="pacman"
-            deps=("base-devel" "linux-headers" "dwarfdump")
-            install_cmd="sudo pacman -S --noconfirm ${deps[@]}"
-            ;;
-        *fedora*|*rhel*)
-            package_manager="dnf"
-            deps=("@development-tools" "kernel-devel" "kernel-debug" "dwarfdump" "kernel-core")
-            install_cmd="sudo dnf install -y ${deps[@]}"
-            ;;
-        *)
             echo "Sistema operativo no soportado"
             exit 1
             ;;
     esac
 
-    # Ejecutar el comando de instalación
-    echo "Instalando dependencias..."
+    # Instalar las dependencias
+    echo "Instalando dependencias para $DISTRO_ID..."
     eval "$install_cmd"
     if [ $? -ne 0 ]; then
-        echo "Error al instalar las dependencias"
+        echo "Error durante la instalación de dependencias"
         exit 1
     fi
 }
+
 
 
 # Actualizar repositorios y habilitar repositorios de depuración
