@@ -58,14 +58,14 @@ install_dependencies() {
         debian)
             package_manager="apt"
             # Si es Debian, instalar las dependencias estándar
-            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump")
+            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump" "zip")
             install_cmd="sudo apt install -y ${deps[@]}"
             ;;
 
         ubuntu)
             package_manager="apt"
             # Si es Ubuntu, instalar dependencias y configurar dbgsym
-            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}" "gcc" "make" "dwarfdump")
+            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}" "gcc" "make" "dwarfdump" "zip")
             install_cmd="sudo apt install -y ${deps[@]}"
             # Configurar repositorios dbgsym si es Ubuntu
             if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
@@ -327,6 +327,7 @@ find_system_map() {
     local possible_locations=(
         "/usr/lib/debug/boot/System.map-$KERNEL_VERSION"
         "/usr/lib/debug/System.map-$KERNEL_VERSION"
+        "/boot/System.map-$KERNEL_VERSION"
     )
 
     for location in "${possible_locations[@]}"; do
@@ -373,19 +374,33 @@ create_vol3_profile() {
     local system_map_path=""
     
     # Verificar sistema operativo
-    case $OS_FAMILY in
+    . /etc/os-release
+    DISTRO_ID=$ID
+
+    case $DISTRO_ID in
+        debian)
+            # Para Debian, las rutas típicas son estas
+            vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            ;;
+        ubuntu)
+            # Para Ubuntu, también las rutas son similares pero con detalles específicos
+            vmlinux_path="/boot/vmlinuz-${KERNEL_VERSION}"
+            system_map_path="/boot/System.map-${KERNEL_VERSION}"
+            ;;
         *debian*|*ubuntu*)
-            # Para Debian y derivados (como Ubuntu), las rutas son típicamente estas
+            # Para derivados de Debian (si es algún derivado que no sea estrictamente Ubuntu o Debian)
+            echo "Distribución derivada de Debian/Ubuntu no identificada específicamente. Usando rutas por defecto."
             vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         *arch*|*manjaro*)
-            # En Arch y Manjaro, las rutas pueden variar, aunque normalmente siguen un esquema similar
+            # En Arch y Manjaro, las rutas pueden variar, normalmente siguen un esquema similar
             vmlinux_path="/usr/lib/modules/${KERNEL_VERSION}/vmlinux-"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         *fedora*|*rhel*)
-            # Fedora, RedHat y derivados pueden tener sus rutas en otro lugar
+            # Fedora, RedHat y derivados tienen rutas diferentes
             vmlinux_path="/boot/vmlinuz-${KERNEL_VERSION}"
             system_map_path="/boot/System.map-${KERNEL_VERSION}"
             ;;
@@ -417,7 +432,7 @@ create_vol3_profile() {
         "temp_vol3/linux-image-${KERNEL_VERSION}-dbg_${KERNEL_VERSION}_amd64-SystemMap.json"
     
     # Crear ZIP para Vol3
-    local zip_name="${OS}-kernel-${KERNEL_VERSION}-vol3.zip"
+    local zip_name="${DISTRO_ID}-kernel-${KERNEL_VERSION}-vol3.zip"
     cd temp_vol3
     zip -r "../$zip_name" ./*
     cd ..
@@ -425,6 +440,7 @@ create_vol3_profile() {
     # Limpiar archivos temporales
     rm -rf temp_vol3
 }
+
 
 # Función para mostrar instrucciones
 show_instructions() {
