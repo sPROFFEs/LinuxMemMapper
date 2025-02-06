@@ -34,14 +34,6 @@ check_dependency() {
             # Verificar si el paquete está instalado en sistemas basados en Debian
             dpkg -l | grep -q "^ii.*$dep"
             ;;
-        *arch*)
-            # Verificar si el paquete está instalado en sistemas basados en Arch
-            pacman -Qi "$dep" >/dev/null 2>&1
-            ;;
-        *fedora*|*rhel*)
-            # Verificar si el paquete está instalado en sistemas basados en Fedora o RHEL
-            rpm -q "$dep" >/dev/null 2>&1
-            ;;
         *)
             echo "Sistema operativo no soportado para verificación de dependencias"
             return 1
@@ -86,19 +78,6 @@ deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multive
                     sudo tee /etc/apt/sources.list.d/ddebs.list
             fi
             ;;
-
-        arch)
-            package_manager="pacman"
-            deps=("base-devel" "linux-headers" "dwarfdump")
-            install_cmd="sudo pacman -S --noconfirm ${deps[@]}"
-            ;;
-
-        fedora|rhel)
-            package_manager="dnf"
-            deps=("@development-tools" "kernel-devel" "kernel-debug" "dwarfdump")
-            install_cmd="sudo dnf install -y ${deps[@]}"
-            ;;
-
         *)
             echo "Sistema operativo no soportado"
             exit 1
@@ -113,156 +92,6 @@ deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multive
         exit 1
     fi
 }
-
-
-
-
-# Actualizar repositorios y habilitar repositorios de depuración
-update_debug_repos() {
-    # Detectar la distribución específica
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        DISTRO_ID=$ID
-        DISTRO_VERSION=$VERSION_ID
-    fi
-
-    case $DISTRO_ID in
-        kali)
-            echo "Actualizando repositorios para Kali Linux..."
-            sudo apt update
-            if ! grep -q "^deb-src" /etc/apt/sources.list; then
-                echo "Habilitando repositorios deb-src..."
-                sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
-                sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
-            fi
-            if ! grep -q "kali-debug" /etc/apt/sources.list; then
-                echo "Agregando repositorios debug de Kali..."
-                echo "deb http://http.kali.org/kali kali-rolling-debug main contrib non-free" | \
-                    sudo tee -a /etc/apt/sources.list.d/kali-debug.list
-            fi
-            sudo apt update
-            ;;
-
-        parrot)
-            echo "Actualizando repositorios para Parrot OS..."
-            sudo apt update
-            if ! grep -q "^deb-src" /etc/apt/sources.list; then
-                echo "Habilitando repositorios deb-src..."
-                sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
-                sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
-            fi
-            if ! grep -q "parrot-debug" /etc/apt/sources.list.d/parrot-debug.list 2>/dev/null; then
-                echo "Agregando repositorios debug de Parrot..."
-                echo "deb http://deb.parrotsec.org/parrot parrot-debug main contrib non-free" | \
-                    sudo tee /etc/apt/sources.list.d/parrot-debug.list
-            fi
-            sudo apt update
-            ;;
-
-        ubuntu|debian)
-            echo "Actualizando repositorios para ${DISTRO_ID^}..."
-            sudo apt update
-            if ! grep -q "^deb-src" /etc/apt/sources.list; then
-                echo "Habilitando repositorios deb-src..."
-                sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
-                sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
-            fi
-            if [ "$DISTRO_ID" = "ubuntu" ]; then
-                if ! dpkg -l ubuntu-dbgsym-keyring >/dev/null 2>&1; then
-                    echo "Instalando llaves para repositorios dbgsym..."
-                    sudo apt install -y ubuntu-dbgsym-keyring
-                fi
-                if ! grep -q "ddebs.ubuntu.com" /etc/apt/sources.list.d/ddebs.list 2>/dev/null; then
-                    echo "Configurando repositorio dbgsym de Ubuntu..."
-                    codename=$(lsb_release -c | cut -f2)
-                    echo "deb http://ddebs.ubuntu.com ${codename} main restricted universe multiverse
-deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multiverse" | \
-                        sudo tee /etc/apt/sources.list.d/ddebs.list
-                fi
-            elif [ "$DISTRO_ID" = "debian" ]; then
-                if ! grep -q "debian-debug" /etc/apt/sources.list.d/debian-debug.list 2>/dev/null; then
-                    echo "Configurando repositorio debug de Debian..."
-                    codename=$(lsb_release -c | cut -f2)
-                    echo "deb http://debug.mirrors.debian.org/debian-debug/ ${codename}-debug main" | \
-                        sudo tee /etc/apt/sources.list.d/debian-debug.list
-                fi
-            fi
-            sudo apt update
-            ;;
-
-        backbox)
-            echo "Actualizando repositorios para BackBox..."
-            sudo apt update
-            if ! grep -q "^deb-src" /etc/apt/sources.list; then
-                echo "Habilitando repositorios deb-src..."
-                sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
-                sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
-            fi
-            if ! grep -q "backbox-debug" /etc/apt/sources.list.d/backbox-debug.list 2>/dev/null; then
-                echo "Agregando repositorios debug de BackBox..."
-                codename=$(lsb_release -c | cut -f2)
-                echo "deb http://ppa.launchpad.net/backbox/debug/ubuntu ${codename} main" | \
-                    sudo tee /etc/apt/sources.list.d/backbox-debug.list
-            fi
-            sudo apt update
-            ;;
-
-        arch)
-            echo "Actualizando repositorios para Arch Linux..."
-            sudo pacman -Syu
-            if ! grep -q "debug" /etc/pacman.conf; then
-                echo "Habilitando repositorios de depuración en Arch Linux..."
-                sudo sed -i '/\[options\]/a DebugLevel = 2' /etc/pacman.conf
-                sudo pacman -S --noconfirm archlinux-keyring
-                sudo pacman -Sy
-            fi
-            ;;
-
-        fedora)
-            echo "Actualizando repositorios para Fedora..."
-            sudo dnf update -y
-            if ! dnf repolist enabled | grep -q "fedora-debuginfo"; then
-                echo "Habilitando repositorios de depuración en Fedora..."
-                sudo dnf config-manager --set-enabled fedora-debuginfo
-                sudo dnf config-manager --set-enabled updates-debuginfo
-                sudo dnf update -y
-            fi
-            ;;
-
-        centos|rhel)
-            echo "Actualizando repositorios para CentOS/RHEL..."
-            sudo yum update -y
-            if ! yum repolist enabled | grep -q "debuginfo"; then
-                echo "Habilitando repositorios de depuración en CentOS/RHEL..."
-                sudo yum install -y yum-utils
-                sudo yum-config-manager --enable rhel-7-server-rpms-debug
-                sudo yum install -y yum-plugin-debuginfo
-                sudo yum update -y
-            fi
-            ;;
-
-        solaris)
-            echo "Actualizando repositorios para Solaris..."
-            # Solaris generalmente no tiene un manejador de paquetes como los anteriores,
-            # y puede necesitar otras configuraciones dependiendo de la versión
-            # El manejo de depuración en Solaris puede implicar configuraciones manuales de repositorios de Oracle.
-            echo "No se encontró soporte de repositorios de depuración automatizado para Solaris."
-            ;;
-
-        *)
-            echo "Distribución no soportada específicamente: $DISTRO_ID"
-            echo "Intentando configuración genérica basada en Debian..."
-            sudo apt update
-            if ! grep -q "^deb-src" /etc/apt/sources.list; then
-                echo "Habilitando repositorios deb-src..."
-                sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
-                sudo sed -i 's/^# *deb-src/deb-src/' /etc/apt/sources.list
-                sudo apt update
-            fi
-            ;;
-    esac
-}
-
 
 # Función para seleccionar versión
 select_version() {
@@ -293,10 +122,6 @@ compile_module() {
         *debian*)
             # En sistemas Debian/Ubuntu
             kernel_src="/lib/modules/${KERNEL_VERSION}/build"
-            ;;
-        *fedora*)
-            # En sistemas fedora Linux
-            kernel_src="/usr/src/kernel/${KERNEL_VERSION}"
             ;;
         *)
             echo "Sistema operativo no soportado para la compilación del módulo"
@@ -417,14 +242,6 @@ create_vol3_profile() {
         *debian*|*ubuntu*)
             vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
-            ;;
-        *arch*|*manjaro*)
-            vmlinux_path="/usr/lib/modules/${KERNEL_VERSION}/vmlinux-"
-            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
-            ;;
-        *fedora*|*rhel*)
-            vmlinux_path="/boot/vmlinuz-${KERNEL_VERSION}"
-            system_map_path="/boot/System.map-${KERNEL_VERSION}"
             ;;
         *)
             echo "Sistema operativo no soportado para la creación del perfil Vol3."
