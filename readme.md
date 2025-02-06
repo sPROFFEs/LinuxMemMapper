@@ -5,7 +5,7 @@
 
 > Volatility 2 & 3 mapping working on some Debian based distros
 
-> Volatility 2 mapping working on ubuntu based distros
+> Volatility 2 & 3 mapping working on Ubuntu based distros
 
 > Working on any other distros... please be patient
 
