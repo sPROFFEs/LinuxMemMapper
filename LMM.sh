@@ -382,31 +382,47 @@ create_vol3_profile() {
     # Verificar sistema operativo
     . /etc/os-release
     DISTRO_ID=$ID
+    DISTRO_VERSION=$VERSION_ID
 
     case $DISTRO_ID in
         debian)
-            # Para Debian, las rutas típicas son estas
             vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         ubuntu)
-            # Para Ubuntu, también las rutas son similares pero con detalles específicos
-            vmlinux_path="/boot/vmlinuz-${KERNEL_VERSION}"
-            system_map_path="/boot/System.map-${KERNEL_VERSION}"
+            # Para Ubuntu, configuramos los repositorios de depuración
+            echo "Configurando repositorios ddebs para Ubuntu..."
+            echo "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted universe multiverse" | \
+                sudo tee -a /etc/apt/sources.list.d/ddebs.list
+            echo "deb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted universe multiverse" | \
+                sudo tee -a /etc/apt/sources.list.d/ddebs.list
+            echo "deb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted universe multiverse" | \
+                sudo tee -a /etc/apt/sources.list.d/ddebs.list
+            
+            # Instalar el paquete de llaves para los repositorios ddebs
+            sudo apt install -y ubuntu-dbgsym-keyring
+            
+            # Importar la clave pública de los repositorios
+            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F2EDC64DC5AEE1F6B9C621F0C8CAB6595FDFF622
+            
+            # Actualizar los repositorios
+            sudo apt-get update
+            
+            # Instalar el paquete de depuración para la versión del kernel actual
+            sudo apt install -y linux-image-${KERNEL_VERSION}-dbgsym
+
+            vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         *debian*|*ubuntu*)
-            # Para derivados de Debian (si es algún derivado que no sea estrictamente Ubuntu o Debian)
-            echo "Distribución derivada de Debian/Ubuntu no identificada específicamente. Usando rutas por defecto."
             vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         *arch*|*manjaro*)
-            # En Arch y Manjaro, las rutas pueden variar, normalmente siguen un esquema similar
             vmlinux_path="/usr/lib/modules/${KERNEL_VERSION}/vmlinux-"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         *fedora*|*rhel*)
-            # Fedora, RedHat y derivados tienen rutas diferentes
             vmlinux_path="/boot/vmlinuz-${KERNEL_VERSION}"
             system_map_path="/boot/System.map-${KERNEL_VERSION}"
             ;;
@@ -446,6 +462,7 @@ create_vol3_profile() {
     # Limpiar archivos temporales
     rm -rf temp_vol3
 }
+
 
 
 # Función para mostrar instrucciones
