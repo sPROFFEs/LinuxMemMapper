@@ -4,6 +4,12 @@
 KERNEL_VERSION=$(uname -r)
 SELECTED_VERSION=""
 
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Advertencia: Este script requiere permisos de administrador."
+    echo "Por favor, ejecute el script como root o usando sudo."
+    exit 1
+fi
+
 # Función para detectar el sistema operativo
 detect_os() {
     if [ -f /etc/os-release ]; then
