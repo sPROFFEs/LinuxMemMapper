@@ -78,6 +78,14 @@ deb http://ddebs.ubuntu.com ${codename}-updates main restricted universe multive
                     sudo tee /etc/apt/sources.list.d/ddebs.list
             fi
             ;;
+        
+        kali)
+            package_manager="apt"
+            # Si es Kali, instalar dependencias estándar para Kali
+            deps=("build-essential" "$headers_package" "linux-image-${KERNEL_VERSION}-dbg" "make" "dwarfdump" "zip")
+            install_cmd="sudo apt install -y ${deps[@]}"
+            ;;
+
         *)
             echo "Sistema operativo no soportado"
             exit 1
@@ -120,7 +128,7 @@ compile_module() {
     # Detectar el sistema operativo para ajustar la ruta del kernel
     case $OS_FAMILY in
         *debian*)
-            # En sistemas Debian/Ubuntu
+            # En sistemas Debian/Ubuntu/Kali
             kernel_src="/lib/modules/${KERNEL_VERSION}/build"
             ;;
         *)
@@ -151,7 +159,6 @@ compile_module() {
     fi
     cd ../../
 }
-
 
 # Función para localizar el System.map correcto
 find_system_map() {
@@ -239,6 +246,10 @@ create_vol3_profile() {
             vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
+        kali)
+            vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            ;;
         *debian*|*ubuntu*)
             vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
@@ -279,8 +290,6 @@ create_vol3_profile() {
     # Limpiar archivos temporales
     rm -rf temp_vol3
 }
-
-
 
 # Función para mostrar instrucciones
 show_instructions() {
