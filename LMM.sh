@@ -211,7 +211,7 @@ create_vol3_profile() {
 
     case $DISTRO_ID in
         debian)
-            vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
+            vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         ubuntu)
@@ -240,7 +240,7 @@ create_vol3_profile() {
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         *debian*|*ubuntu*)
-            vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
+            vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
             ;;
         *)
