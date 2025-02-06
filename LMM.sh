@@ -219,7 +219,7 @@ create_vol3_profile() {
     case $DISTRO_ID in
         debian)
             vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
-            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             ;;
         ubuntu)
             # Para Ubuntu, configuramos los repositorios de depuración
@@ -243,16 +243,16 @@ create_vol3_profile() {
             # Instalar el paquete de depuración para la versión del kernel actual
             sudo apt install -y linux-image-${KERNEL_VERSION}-dbgsym
 
-            vmlinux_path="/usr/lib/debug/boot/vmlinuz-${KERNEL_VERSION}"
-            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             ;;
         kali)
             vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
-            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             ;;
         *debian*|*ubuntu*)
             vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
-            system_map_path="/usr/lib/debug/boot/System.map-${KERNEL_VERSION}"
+            system_map_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             ;;
         *)
             echo "Sistema operativo no soportado para la creación del perfil Vol3."
