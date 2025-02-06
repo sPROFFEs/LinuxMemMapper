@@ -222,27 +222,46 @@ create_vol3_profile() {
             system_map_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             ;;
         ubuntu)
-            # Para Ubuntu, configuramos los repositorios de depuración
-            echo "Configurando repositorios ddebs para Ubuntu..."
-            echo "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted universe multiverse" | \
-                sudo tee -a /etc/apt/sources.list.d/ddebs.list
-            echo "deb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted universe multiverse" | \
-                sudo tee -a /etc/apt/sources.list.d/ddebs.list
-            echo "deb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted universe multiverse" | \
-                sudo tee -a /etc/apt/sources.list.d/ddebs.list
+            # Check if debug repositories are already configured
+            if ! grep -q "deb http://ddebs.ubuntu.com" /etc/apt/sources.list.d/ddebs.list 2>/dev/null; then
+                echo "Debug repositories not found. Configuring ddebs repositories for Ubuntu..."
+                
+                # Create or append to ddebs.list
+                sudo touch /etc/apt/sources.list.d/ddebs.list
+                echo "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted universe multiverse" | \
+                    sudo tee -a /etc/apt/sources.list.d/ddebs.list
+                echo "deb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted universe multiverse" | \
+                    sudo tee -a /etc/apt/sources.list.d/ddebs.list
+                echo "deb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted universe multiverse" | \
+                    sudo tee -a /etc/apt/sources.list.d/ddebs.list
+                
+                # Check if ubuntu-dbgsym-keyring is installed
+                if ! dpkg -l | grep -q ubuntu-dbgsym-keyring; then
+                    echo "Installing ubuntu-dbgsym-keyring..."
+                    sudo apt install -y ubuntu-dbgsym-keyring
+                fi
+                
+                # Import repository key if not already imported
+                if ! apt-key list | grep -q "Ubuntu Debug Symbol Archive Automatic Signing Key"; then
+                    echo "Importing debug repository key..."
+                    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F2EDC64DC5AEE1F6B9C621F0C8CAB6595FDFF622
+                fi
+                
+                # Update package lists
+                echo "Updating package lists..."
+                sudo apt-get update
+            else
+                echo "Debug repositories are already configured."
+            fi
             
-            # Instalar el paquete de llaves para los repositorios ddebs
-            sudo apt install -y ubuntu-dbgsym-keyring
+            # Check if debug symbols are installed for current kernel
+            if ! dpkg -l | grep -q "linux-image-${KERNEL_VERSION}-dbgsym"; then
+                echo "Installing kernel debug symbols..."
+                sudo apt install -y linux-image-${KERNEL_VERSION}-dbgsym
+            else
+                echo "Kernel debug symbols are already installed."
+            fi
             
-            # Importar la clave pública de los repositorios
-            sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F2EDC64DC5AEE1F6B9C621F0C8CAB6595FDFF622
-            
-            # Actualizar los repositorios
-            sudo apt-get update
-            
-            # Instalar el paquete de depuración para la versión del kernel actual
-            sudo apt install -y linux-image-${KERNEL_VERSION}-dbgsym
-
             vmlinux_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             system_map_path="/usr/lib/debug/boot/vmlinux-${KERNEL_VERSION}"
             ;;
@@ -274,18 +293,18 @@ create_vol3_profile() {
     
     echo "Generando archivos JSON para Volatility 3..."
     
-    # Ejecutar dwarf2json para generar los archivos JSON
-    ./dwarf2json linux --elf "$vmlinux_path" > \
-        "temp_vol3/linux-image-${KERNEL_VERSION}-dbg_${KERNEL_VERSION}_amd64.json"
+    # Generate JSON files and compress them directly with xz
+    ./dwarf2json linux --elf "$vmlinux_path" | \
+        xz -9 > "temp_vol3/linux-image-${KERNEL_VERSION}-dbg_${KERNEL_VERSION}_amd64.json.xz"
     
-    ./dwarf2json linux --elf "$vmlinux_path" --system-map "$system_map_path" > \
-        "temp_vol3/linux-image-${KERNEL_VERSION}-dbg_${KERNEL_VERSION}_amd64-SystemMap.json"
+    ./dwarf2json linux --elf "$vmlinux_path" --system-map "$system_map_path" | \
+        xz -9 > "temp_vol3/linux-image-${KERNEL_VERSION}-dbg_${KERNEL_VERSION}_amd64-SystemMap.json.xz"
     
-    # Crear ZIP para Vol3
-    local zip_name="${DISTRO_ID}-kernel-${KERNEL_VERSION}-vol3.zip"
-    cd temp_vol3
-    zip -r "../$zip_name" ./*
-    cd ..
+    # Create final directory with compressed files
+    local dir_name="${DISTRO_ID}-kernel-${KERNEL_VERSION}-vol3"
+    mv temp_vol3 "$dir_name"
+    
+    echo "Profile files have been created and compressed in directory: $dir_name"
     
     # Limpiar archivos temporales
     rm -rf temp_vol3
