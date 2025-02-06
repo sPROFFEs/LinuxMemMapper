@@ -2,6 +2,10 @@
 # Linux Memory Mapper (LMM)
 
 🔍 A Bash script utility to create volatility 2 & 3 memory maps for the executing system.
+> Volatility 2 & 3 mapping working on some Debian based distros
+> Volatility 2 mapping working on ubuntu based distros
+> Working on any other distros... please be patient
+
 
 ![Bash](https://img.shields.io/badge/-Bash-4EAA25?logo=gnu-bash&logoColor=white)
 ![Linux](https://img.shields.io/badge/-Linux-FCC624?logo=linux&logoColor=black)
